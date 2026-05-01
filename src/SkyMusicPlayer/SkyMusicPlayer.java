@@ -1,11 +1,12 @@
 /*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
+ * Clase principal del proyecto SkyAutoSheetplayer
  */
 package SkyMusicPlayer;
 
+import javax.swing.SwingUtilities;
+
 /**
- *
+ * Punto de entrada de la aplicación
  * @author botel
  */
 public class SkyMusicPlayer {
@@ -14,7 +15,9 @@ public class SkyMusicPlayer {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        // TODO code application logic here
+        // Iniciar la GUI en el hilo de eventos de Swing
+        SwingUtilities.invokeLater(() -> {
+            new SkyMusicGUI().setVisible(true);
+        });
     }
-    
 }
