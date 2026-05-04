@@ -72,7 +72,7 @@ public class SkyMusicGUI extends JFrame {
         filePanel.add(btnLoad, BorderLayout.CENTER);
         bottomPanel.add(filePanel);
 
-        // Fila 2: Velocidad e Idioma
+        // Fila 2: Velocidad y teclado
         JPanel speedLanguagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
         
         // Velocidad
@@ -81,10 +81,10 @@ public class SkyMusicGUI extends JFrame {
         comboSpeed = new JComboBox<>(speeds);
         comboSpeed.setSelectedIndex(1);
         speedLanguagePanel.add(comboSpeed);
-        
-        // Idioma
-        speedLanguagePanel.add(new JLabel("Idioma del teclado:"));
-        String[] languages = {"Inglés (QWERTY)", "Español (QWERTY)"};
+
+        // Teclado
+        speedLanguagePanel.add(new JLabel("Teclado:"));
+        String[] languages = {"Juego", "Web"};
         comboLanguage = new JComboBox<>(languages);
         comboLanguage.setSelectedIndex(0);
         speedLanguagePanel.add(comboLanguage);
@@ -187,14 +187,14 @@ public class SkyMusicGUI extends JFrame {
         progressBar.setVisible(true);
         progressBar.setValue(0);
 
-        // Obtener velocidad y idioma seleccionados
+        // Obtener velocidad seleccionada
         int delayMs = getSelectedSpeed();
-        boolean isSpanish = comboLanguage.getSelectedIndex() == 1;
+        boolean useWebKeyboard = isWebKeyboardSelected();
 
         // Iniciar reproducción en un hilo separado
         playbackThread = new Thread(() -> {
             try {
-                autoPlayer.playFromFile(selectedFilePath, delayMs, isSpanish, (progress) -> {
+                autoPlayer.playFromFile(selectedFilePath, delayMs, useWebKeyboard, (progress) -> {
                     SwingUtilities.invokeLater(() -> {
                         progressBar.setValue(progress);
                     });
@@ -211,6 +211,10 @@ public class SkyMusicGUI extends JFrame {
             SwingUtilities.invokeLater(this::resetPlayback);
         });
         playbackThread.start();
+    }
+
+    private boolean isWebKeyboardSelected() {
+        return comboLanguage != null && "Web".equals(comboLanguage.getSelectedItem());
     }
 
     private void stopPlayback() {

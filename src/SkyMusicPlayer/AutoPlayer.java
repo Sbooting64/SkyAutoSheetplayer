@@ -18,13 +18,13 @@ import javax.swing.SwingUtilities;
 public class AutoPlayer {
     private volatile boolean isRunning = false;
     private Thread playbackThread;
-    private boolean useSpanishKeyboard = false;
+    private boolean useWebKeyboard = false;
     
     // Mapeo manual de caracteres especiales a códigos de tecla (INGLÉS)
     private static final Map<Character, Integer> CHAR_TO_KEYCODE_EN = new HashMap<>();
     
-    // Mapeo manual de caracteres especiales a códigos de tecla (ESPAÑOL)
-    private static final Map<Character, Integer> CHAR_TO_KEYCODE_ES = new HashMap<>();
+    // Mapeo manual de caracteres especiales a códigos de tecla (WEB)
+    private static final Map<Character, Integer> CHAR_TO_KEYCODE_WEB = new HashMap<>();
     
     static {
         // Inicializar caracteres especiales - INGLÉS (QWERTY)
@@ -32,21 +32,19 @@ public class AutoPlayer {
         CHAR_TO_KEYCODE_EN.put(',', KeyEvent.VK_COMMA);
         CHAR_TO_KEYCODE_EN.put('.', KeyEvent.VK_PERIOD);
         CHAR_TO_KEYCODE_EN.put('/', KeyEvent.VK_SLASH);
-        CHAR_TO_KEYCODE_EN.put('.', KeyEvent.VK_1);
         
-        // Inicializar caracteres especiales - ESPAÑOL (QWERTY)
+        // Inicializar caracteres especiales - WEB (equivalente a español en este contexto)
         // Mapeamos a teclas que existen de forma segura en todos los teclados
-        CHAR_TO_KEYCODE_ES.put(';', KeyEvent.VK_OPEN_BRACKET);  // [ (Ñ en español)
-        CHAR_TO_KEYCODE_ES.put(',', KeyEvent.VK_QUOTE);          // ' (? en español)
-        CHAR_TO_KEYCODE_ES.put('.', KeyEvent.VK_PERIOD);         // . (punto, igual)
-        CHAR_TO_KEYCODE_ES.put('/', KeyEvent.VK_BACK_SLASH);     // \ (/ en español con Shift)
-        CHAR_TO_KEYCODE_ES.put('.', KeyEvent.VK_1);              // 1 (igual)
+        CHAR_TO_KEYCODE_WEB.put(';', KeyEvent.VK_OPEN_BRACKET);  
+        CHAR_TO_KEYCODE_WEB.put(',', KeyEvent.VK_QUOTE);        
+        CHAR_TO_KEYCODE_WEB.put('.', KeyEvent.VK_PERIOD);        
+        CHAR_TO_KEYCODE_WEB.put('/', KeyEvent.VK_BACK_SLASH);     
     }
     
-    // Obtiene el código de tecla para un carácter según el idioma
+    // Obtiene el código de tecla para un carácter según el teclado seleccionado
     private int getKeyCodeForChar(char c) {
         try {
-            Map<Character, Integer> charMap = useSpanishKeyboard ? CHAR_TO_KEYCODE_ES : CHAR_TO_KEYCODE_EN;
+            Map<Character, Integer> charMap = useWebKeyboard ? CHAR_TO_KEYCODE_WEB : CHAR_TO_KEYCODE_EN;
             
             // Primero, intentar buscar en el mapa del idioma seleccionado
             if (charMap.containsKey(c)) {
@@ -75,9 +73,10 @@ public class AutoPlayer {
 
     // Mapeo de notas a teclas usando HashMap para evitar conflictos
     private static final Map<String, String> NOTE_TO_KEY = new HashMap<>();
+    private static final Map<String, String> NOTE_TO_KEY_WEB = new HashMap<>();
     
     static {
-        // Inicializar el mapa de notas a teclas
+        // Inicializar el mapa de notas a teclas para teclado normal
         NOTE_TO_KEY.put("A1", "y");
         NOTE_TO_KEY.put("A2", "u");
         NOTE_TO_KEY.put("A3", "i");
@@ -91,32 +90,63 @@ public class AutoPlayer {
         NOTE_TO_KEY.put("C1", "n");
         NOTE_TO_KEY.put("C2", "m");
         NOTE_TO_KEY.put("C3", ",");
-        NOTE_TO_KEY.put(".", "1");  // Nota de silencio o espacio en blanco
-        NOTE_TO_KEY.put("C4", "."); 
+        NOTE_TO_KEY.put(".", "");       // Silencio - no presiona nada
+        NOTE_TO_KEY.put("C4", ".");     // C4 - presiona la tecla .
         NOTE_TO_KEY.put("C5", "/");
+
+        // Inicializar el mapa de notas a teclas para teclado Web (misma asignación de notas)
+        NOTE_TO_KEY_WEB.put("A1", "q");
+        NOTE_TO_KEY_WEB.put("A2", "w");
+        NOTE_TO_KEY_WEB.put("A3", "e");
+        NOTE_TO_KEY_WEB.put("A4", "r");
+        NOTE_TO_KEY_WEB.put("A5", "t");
+        NOTE_TO_KEY_WEB.put("B1", "a");
+        NOTE_TO_KEY_WEB.put("B2", "s");
+        NOTE_TO_KEY_WEB.put("B3", "d");
+        NOTE_TO_KEY_WEB.put("B4", "f");
+        NOTE_TO_KEY_WEB.put("B5", "g");
+        NOTE_TO_KEY_WEB.put("C1", "z");
+        NOTE_TO_KEY_WEB.put("C2", "x");
+        NOTE_TO_KEY_WEB.put("C3", "c");
+        NOTE_TO_KEY_WEB.put(".", "");       // Silencio - no presiona nada
+        NOTE_TO_KEY_WEB.put("C4", "v");     // C4 - presiona la tecla .
+        NOTE_TO_KEY_WEB.put("C5", "b");
     }
 
     // Mapeo de notas a teclas - método robusto que evita conflictos
-    private static String replaceSent(String sentence) {
+    private String replaceSent(String sentence) {
+        Map<String, String> noteMap = useWebKeyboard ? NOTE_TO_KEY_WEB : NOTE_TO_KEY;
         StringBuilder result = new StringBuilder();
         int i = 0;
         
         while (i < sentence.length()) {
-            // Intentar coincidir con notas de 2 caracteres (A1, A2, B3, C4, etc.)
             boolean matched = false;
             
+            // Primero intentar coincidir con notas de 2 caracteres (A1, A2, B3, etc.)
             if (i + 1 < sentence.length()) {
                 String twoCharNote = sentence.substring(i, i + 2);
-                if (NOTE_TO_KEY.containsKey(twoCharNote)) {
-                    result.append(NOTE_TO_KEY.get(twoCharNote));
+                if (noteMap.containsKey(twoCharNote)) {
+                    result.append(noteMap.get(twoCharNote));
                     i += 2;
                     matched = true;
                 }
             }
             
-            // Si no encontró nota de 2 caracteres, procesar el carácter actual
+            // Si no encontró nota de 2 caracteres, intentar carácter individual
             if (!matched) {
-                result.append(sentence.charAt(i));
+                String oneCharNote = String.valueOf(sentence.charAt(i));
+                if (noteMap.containsKey(oneCharNote)) {
+                    result.append(noteMap.get(oneCharNote));
+                    i++;
+                    matched = true;
+                }
+            }
+            
+            // Si no es una nota mapeada, ignorar (excepto espacios que actúan como separadores)
+            if (!matched) {
+                if (sentence.charAt(i) == ' ') {
+                    result.append(' ');
+                }
                 i++;
             }
         }
@@ -174,16 +204,16 @@ public class AutoPlayer {
      * 
      * @param filePath Ruta al archivo .txt con las notas
      * @param delayMs Retraso en milisegundos entre pulsaciones
-     * @param isSpanish True si se usa teclado español, false si es inglés
+     * @param useWebKeyboard True si se usa teclado Web, false si es Inglés
      * @param progressCallback Callback para actualizar el progreso (0-100)
      * @throws java.io.IOException Si hay error al leer el archivo
      */
-    public void playFromFile(String filePath, int delayMs, boolean isSpanish, Consumer<Integer> progressCallback) throws java.io.IOException {
+    public void playFromFile(String filePath, int delayMs, boolean useWebKeyboard, Consumer<Integer> progressCallback) throws java.io.IOException {
         isRunning = true;
-        useSpanishKeyboard = isSpanish;
+        this.useWebKeyboard = useWebKeyboard;
         playbackThread = Thread.currentThread();
         
-        String keyboardType = isSpanish ? "ESPAÑOL" : "INGLÉS";
+        String keyboardType = useWebKeyboard ? "WEB" : "INGLÉS";
         System.out.println("Iniciando reproducción con teclado: " + keyboardType);
 
         try {
@@ -213,12 +243,6 @@ public class AutoPlayer {
                 if (!isRunning || Thread.currentThread().isInterrupted()) {
                     System.out.println("Reproducción detenida.");
                     return;
-                }
-
-                // Ignorar puntos (silencios/partituras en blanco)
-                if (c == '.') {
-                    processedChars++;
-                    continue;
                 }
 
                 if (c == ' ') {
